@@ -16,7 +16,6 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 builder.Services.AddScoped<IStudentInserter, StudentInserter>();
 builder.Services.AddHostedService<KafkaStudentConsumer>();
 
-// (Optional) Add minimal endpoint
 builder.Services.AddControllers();
 
 // Database
