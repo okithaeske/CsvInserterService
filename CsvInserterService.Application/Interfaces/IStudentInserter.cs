@@ -1,8 +1,9 @@
-﻿using CsvInserterService.Domain.Entities;
+﻿using System.Threading.Tasks;
 
-namespace CsvInserterService.Application.Interfaces;
-
-public interface IStudentInserter
+namespace CsvInserterService.Application.Interfaces
 {
-    Task InsertAsync(Student student);
+    public interface IStudentInserter
+    {
+        Task InsertStudentsFromCsvAsync(string filePath);
+    }
 }

@@ -1,54 +1,66 @@
 ﻿using CsvInserterService.Application.Interfaces;
-using CsvInserterService.Domain.Entities;
 using CsvInserterService.Infrastructure.Data;
-using Microsoft.Extensions.Logging;
-using StackExchange.Redis;
-using System.Text.Json;
+using CsvInserterService.Infrastructure.Models;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Threading.Tasks;
 
-namespace CsvInserterService.Infrastructure.Services;
-
-public class StudentInserter : IStudentInserter
+namespace CsvInserterService.Infrastructure.Services
 {
-    private readonly ILogger<StudentInserter> _logger;
-    private readonly IDatabase _redisDb;
-    private readonly AppDbContext _db;
-
-    public StudentInserter(
-        ILogger<StudentInserter> logger,
-        IConnectionMultiplexer redis,
-        AppDbContext db)
+    public class StudentInserter : IStudentInserter
     {
-        _logger = logger;
-        _redisDb = redis.GetDatabase();
-        _db = db;
-    }
+        private readonly ApplicationDbContext _context;
 
-    [Obsolete]
-    public async Task InsertAsync(Student student)
-    {
-        try
+        public StudentInserter(ApplicationDbContext context)
         {
-            // Save to PostgreSQL
-            _db.Students.Add(student);
-            await _db.SaveChangesAsync();
-
-            // Notify via Redis
-            var message = JsonSerializer.Serialize(new
-            {
-                name = student.Name,
-                email = student.Email,
-                course = student.Course,
-                timestamp = DateTime.UtcNow
-            });
-
-            _ = await _redisDb.PublishAsync("csv-progress", message);
-
-            _logger.LogInformation($"[DB INSERT] {student.Name} added successfully");
+            _context = context;
         }
-        catch (Exception ex)
+
+        public async Task InsertStudentsFromCsvAsync(string filePath)
         {
-            _logger.LogError(ex, "Failed to insert student record");
+            if (!File.Exists(filePath))
+                throw new FileNotFoundException($"File not found: {filePath}");
+
+            Console.WriteLine($"📂 Reading CSV file: {filePath}");
+
+            var students = new List<Student>();
+
+            using var reader = new StreamReader(filePath);
+            string? headerLine = await reader.ReadLineAsync(); // skip header
+
+            while (!reader.EndOfStream)
+            {
+                var line = await reader.ReadLineAsync();
+                if (string.IsNullOrWhiteSpace(line)) continue;
+
+                var columns = line.Split(',');
+
+                if (columns.Length < 3)
+                    continue; // skip invalid lines
+
+                var student = new Student
+                {
+                    Name = columns[0].Trim(),
+                    Email = columns[1].Trim(),
+                    Course = columns[2].Trim()
+                };
+
+                students.Add(student);
+            }
+
+            if (students.Count == 0)
+            {
+                Console.WriteLine("⚠️ No valid student rows found in CSV.");
+                return;
+            }
+
+            await _context.Students.AddRangeAsync((IEnumerable<Domain.Entities.Student>)students);
+            await _context.SaveChangesAsync();
+
+            Console.WriteLine($"✅ Successfully inserted {students.Count} students into database.");
         }
     }
 }
-    

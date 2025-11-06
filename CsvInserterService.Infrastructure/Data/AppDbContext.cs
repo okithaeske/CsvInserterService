@@ -1,12 +1,17 @@
 ﻿using CsvInserterService.Domain.Entities;
+using CsvInserterService.Infrastructure.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace CsvInserterService.Infrastructure.Data;
-
-public class AppDbContext : DbContext
+namespace CsvInserterService.Infrastructure.Data
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options)
-        : base(options) { }
+    public class ApplicationDbContext : DbContext
+    {
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+            : base(options)
+        {
+        }
 
-    public DbSet<Student> Students { get; set; }
+        public DbSet<CsvRow> CsvRows { get; set; }
+        public DbSet<Domain.Entities.Student> Students => Set<Domain.Entities.Student>();
+    }
 }

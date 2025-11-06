@@ -2,12 +2,22 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /app
 
-# Copy csproj and restore as distinct layers
-COPY *.csproj ./
+# Copy the solution file
+COPY CsvInserterService.sln ./
+
+# Copy all project files
+COPY CsvInserterService.Api/*.csproj ./CsvInserterService.Api/
+COPY CsvInserterService.Application/*.csproj ./CsvInserterService.Application/
+COPY CsvInserterService.Domain/*.csproj ./CsvInserterService.Domain/
+COPY CsvInserterService.Infrastructure/*.csproj ./CsvInserterService.Infrastructure/
+
+# Restore NuGet packages
 RUN dotnet restore
 
-# Copy everything else and build
+# Copy everything else
 COPY . ./
+
+# Build and publish
 RUN dotnet publish -c Release -o out
 
 # Build runtime image
@@ -15,8 +25,8 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app/out .
 
-# Expose the default port
-EXPOSE 80
+# Expose the port
+EXPOSE 8080
 
 # Run the app
-ENTRYPOINT ["dotnet", "CsvInserter.dll"]
+ENTRYPOINT ["dotnet", "CsvInserterService.Api.dll"]
